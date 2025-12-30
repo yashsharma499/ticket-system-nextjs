@@ -16,8 +16,8 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
-  const [backupStats, setBackupStats] = useState(null); // ⬅ Store original stats to restore instantly
-  const [filterLoading, setFilterLoading] = useState(false); // ⬅ Lightweight loader only for Filter button
+  const [backupStats, setBackupStats] = useState(null); 
+  const [filterLoading, setFilterLoading] = useState(false); 
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
@@ -34,9 +34,9 @@ export default function AdminDashboard() {
     const res = await fetch(url);
     const data = await res.json();
 
-    setTimeout(() => {                 // Smooth transition effect
+    setTimeout(() => {                 
       setStats(data);
-      if (!applyFilter) setBackupStats(data); // Save original first time only
+      if (!applyFilter) setBackupStats(data); 
       setFilterLoading(false);
     }, 300); // 300ms smooth update
   }

@@ -32,7 +32,7 @@ const TicketSchema = new mongoose.Schema(
     ],
     resolvedAt: { type: Date, default: null },
 
-    // FINAL --> Only Array of URL Strings ✔
+   
     attachments: [{ type: String }],
   },
   { timestamps: true }

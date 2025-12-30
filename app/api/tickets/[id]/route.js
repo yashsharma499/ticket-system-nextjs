@@ -5,14 +5,14 @@ import User from "@/models/User";
 import { verifyToken } from "@/utils/auth";
 import { sendNotification } from "@/lib/notify";
 import { sendEmail } from "@/utils/sendEmail";
-import { ticketUpdateSchema } from "@/lib/validations/ticketUpdateSchema"; // Zod Validation
+import { ticketUpdateSchema } from "@/lib/validations/ticketUpdateSchema"; 
 
 
-/* ====================== GET A SINGLE TICKET ====================== */
+/* ====================== GET SINGLE TICKET ====================== */
 export async function GET(req, context) {
   try {
     await connectDB();
-    const { id } = await context.params; // ✔ Correct way in App Router
+    const { id } = await context.params;
 
     const ticket = await Ticket.findById(id)
       .populate("createdBy", "name email role")
@@ -31,13 +31,12 @@ export async function GET(req, context) {
 
 
 
-/* ================== UPDATE TICKET (Zod Validation) ================== */
+/* ====================== UPDATE TICKET ====================== */
 export async function PATCH(req, context) {
   try {
     await connectDB();
-    const { id } = await context.params; // ✔ Fixed
+    const { id } = await context.params;
 
-    // Auth Check
     const token = req.cookies.get("token")?.value;
     const user = verifyToken(token);
     if (!user)
@@ -45,14 +44,11 @@ export async function PATCH(req, context) {
 
     const body = await req.json();
 
-    // ----------- ZOD Validation -----------
+    // Validate with ZOD
     const parse = ticketUpdateSchema.safeParse(body);
     if (!parse.success) {
       return NextResponse.json(
-        {
-          message: "Invalid input",
-          errors: parse.error.flatten().fieldErrors
-        },
+        { message: "Invalid input", errors: parse.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
@@ -61,21 +57,28 @@ export async function PATCH(req, context) {
     if (!before)
       return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
 
-    // Only admin can assign agent
+    // Agent cannot assign new agent
     if (parse.data.assignedTo && user.role !== "admin")
       return NextResponse.json({ message: "Only admin can assign agents" }, { status: 403 });
 
-    // Apply update
+    
+    /* ----------------------------------------------------------
+       🕒 Auto-store resolution timestamp when marked "Resolved"
+    ---------------------------------------------------------- */
+    if (parse.data.status === "Resolved" && !before.resolvedAt) {
+      parse.data.resolvedAt = new Date();
+    }
+
+
+    // Update Ticket
     const updatedTicket = await Ticket.findByIdAndUpdate(id, parse.data, { new: true })
       .populate("createdBy", "name email")
       .populate("assignedTo", "name email");
 
 
-    /* =====================================================
-       🔔 EVENT TRIGGERS - Notification + Email Based on Change
-       ===================================================== */
+    /* ================= Notifications + Email ================= */
 
-    /** 1️⃣ New Agent Assigned */
+    // 1️⃣ Assigned Agent Notification
     if (parse.data.assignedTo && parse.data.assignedTo !== before.assignedTo?.toString()) {
       await sendNotification({
         userId: parse.data.assignedTo,
@@ -88,13 +91,12 @@ export async function PATCH(req, context) {
         await sendEmail({
           to: agent.email,
           subject: `New Ticket Assigned`,
-          html: `<h2>🎫 New Assignment</h2><p>You are assigned to <b>${before.title}</b>.</p>`
+          html: `<h2>🎫 New Ticket Assigned</h2><p>${before.title}</p>`,
         });
       } catch (e) { console.log("Email(assign) failed:", e.message); }
     }
 
-
-    /** 2️⃣ Status Changed */
+    // 2️⃣ Status Changed Notification
     if (parse.data.status && parse.data.status !== before.status) {
       await sendNotification({
         userId: before.createdBy,
@@ -107,13 +109,12 @@ export async function PATCH(req, context) {
         await sendEmail({
           to: creator.email,
           subject: `Ticket Status Updated`,
-          html: `<p>Your ticket <b>${before.title}</b> is now <b>${parse.data.status}</b></p>`
+          html: `<p>Your ticket <b>${before.title}</b> is now <b>${parse.data.status}</b></p>`,
         });
       } catch (e) { console.log("Email(status) failed:", e.message); }
     }
 
-
-    /** 3️⃣ Priority Changed */
+    // 3️⃣ Priority Changed Notification
     if (parse.data.priority && parse.data.priority !== before.priority) {
       await sendNotification({
         userId: before.createdBy,
@@ -126,7 +127,7 @@ export async function PATCH(req, context) {
         await sendEmail({
           to: creator.email,
           subject: `Ticket Priority Updated`,
-          html: `<p>Priority changed to <b>${parse.data.priority}</b></p>`
+          html: `<p>Priority changed to <b>${parse.data.priority}</b></p>`,
         });
       } catch (e) { console.log("Email(priority) failed:", e.message); }
     }
@@ -142,4 +143,3 @@ export async function PATCH(req, context) {
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
-

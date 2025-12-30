@@ -21,15 +21,14 @@ const UserSchema = new mongoose.Schema(
       required: true 
     },
 
-    // ================= User Roles =================
+    
     role: {
       type: String,
       enum: ["admin", "agent", "customer"],   // customer = normal user
       default: "customer",
     },
 
-    // ================= Login Sessions =================
-    // Stores multiple device logins with tokens
+    
     sessions: [
       {
         token: String,

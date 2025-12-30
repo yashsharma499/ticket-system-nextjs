@@ -59,9 +59,10 @@ export async function GET(req) {
 
     let avgResolutionTime = 0;
     if (resolvedTickets.length > 0) {
-      const totalHours = resolvedTickets.reduce((sum, t) =>
-        sum + (new Date(t.resolvedAt) - new Date(t.createdAt)) / (1000 * 60 * 60)
-      , 0);
+     const totalHours = resolvedTickets.reduce((sum, t) => {
+  const diff = (new Date(t.resolvedAt) - new Date(t.createdAt)) / (1000 * 60 * 60);
+  return diff > 0 ? sum + diff : sum;  // prevent negative
+}, 0);
 
       avgResolutionTime = (totalHours / resolvedTickets.length).toFixed(1); // in hours
     }
