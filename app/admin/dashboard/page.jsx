@@ -1,4 +1,3 @@
-
 "use client";
 import { useEffect, useState } from "react";
 import { Pie, Bar } from "react-chartjs-2";
@@ -44,8 +43,12 @@ export default function AdminDashboard() {
   // Load initial stats once
   useEffect(() => { fetchStats(false); }, []);
 
-  if (!stats) return <p className="text-white p-20">Loading Dashboard...</p>;
-
+  if (!stats)
+  return (
+    <div className="flex justify-center items-center h-screen">
+      <p className="text-white text-xl">Loading Dashboard...</p>
+    </div>
+  );
   return (
     <div className="min-h-screen bg-[#0b0d10] text-white p-10 pt-24">
 
