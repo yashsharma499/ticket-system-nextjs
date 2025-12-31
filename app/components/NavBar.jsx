@@ -167,12 +167,7 @@ export default function NavBar() {
                   ))}
                 </div>
 
-                {/* <button
-                  onClick={() => router.push("/notifications")}
-                  className="mt-3 w-full text-center text-xs text-blue-300 hover:text-blue-400"
-                >
-                  View All →
-                </button> */}
+               
               </motion.div>
             )}
           </AnimatePresence>

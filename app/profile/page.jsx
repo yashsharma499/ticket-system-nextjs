@@ -1,3 +1,4 @@
+
 "use client";
 import { useEffect, useState } from "react";
 import { User, Lock, LogOut, RefreshCw } from "lucide-react";
@@ -13,6 +14,12 @@ export default function ProfilePage() {
 
   const [sessions, setSessions] = useState([]);
 
+  // Loading states for disabling buttons
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+  const [loadingPass, setLoadingPass] = useState(false);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [loadingLogoutAll, setLoadingLogoutAll] = useState(false);
+
   useEffect(() => {
     loadUser();
     loadSessions();
@@ -26,7 +33,14 @@ export default function ProfilePage() {
     setEmail(data.user?.email);
   }
 
+  /* ================= UPDATE PROFILE (Prevent toast if no change) ================= */
   async function updateProfile() {
+    if (name === user?.name && email === user?.email) {
+      toast.error("No changes detected");
+      return;
+    }
+
+    setLoadingUpdate(true);
     const res = await fetch("/api/profile/update", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -34,13 +48,27 @@ export default function ProfilePage() {
     });
 
     const data = await res.json();
+
     res.ok ? toast.success(data.message || "Profile Updated")
            : toast.error(data.message || "Update failed");
 
     if (res.ok) loadUser();
+    setLoadingUpdate(false);
   }
 
+  /* ================= CHANGE PASSWORD (Prevent if empty or same) ================= */
   async function changePassword() {
+    if (!oldPass || !newPass) {
+      toast.error("Enter both old & new password");
+      return;
+    }
+
+    if (oldPass === newPass) {
+      toast.error("New password cannot be same as old");
+      return;
+    }
+
+    setLoadingPass(true);
     const res = await fetch("/api/profile/password", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -48,24 +76,32 @@ export default function ProfilePage() {
     });
 
     const data = await res.json();
-    res.ok ? toast.success(data.message || "Password Updated Successfully")
+
+    res.ok ? toast.success("Password updated successfully")
            : toast.error(data.message || "Incorrect password");
 
     setOldPass("");
     setNewPass("");
+    setLoadingPass(false);
   }
 
   async function loadSessions() {
+    setLoadingSessions(true);
     const res = await fetch("/api/profile/sessions");
     const data = await res.json();
     setSessions(data.sessions || []);
+    setLoadingSessions(false);
   }
 
   async function logoutAll() {
+    setLoadingLogoutAll(true);
     const res = await fetch("/api/profile/logout-all", { method: "POST" });
     const data = await res.json();
+
     res.ok ? toast.success(data.message) : toast.error("Action Failed");
     if (res.ok) setSessions([]);
+
+    setLoadingLogoutAll(false);
   }
 
   if (!user) return <div className="text-white p-10">Loading Profile...</div>;
@@ -82,23 +118,16 @@ export default function ProfilePage() {
         <div className="bg-gray-800/60 p-6 rounded-xl shadow-xl border border-gray-700 backdrop-blur-xl space-y-5">
           <h2 className="text-xl font-semibold flex items-center gap-2"><User size={20}/> Personal Info</h2>
 
-          <input
-            value={name} onChange={(e) => setName(e.target.value)}
-            className="w-full p-3 bg-gray-700 rounded-lg outline-none border border-transparent focus:border-blue-500"
-            placeholder="Your Name"
-          />
-
-          <input
-            value={email} onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 bg-gray-700 rounded-lg outline-none border border-transparent focus:border-blue-500"
-            placeholder="Your Email"
-          />
+          <input value={name} onChange={(e)=>setName(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg outline-none" />
+          <input value={email} onChange={(e)=>setEmail(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg outline-none" />
 
           <button
             onClick={updateProfile}
-            className="w-full bg-blue-600 py-2 rounded-lg hover:bg-blue-700 font-semibold transition"
+            disabled={loadingUpdate}
+            className={`w-full py-2 rounded-lg font-semibold transition
+              ${loadingUpdate ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
           >
-            Update Profile
+            {loadingUpdate ? "Updating..." : "Update Profile"}
           </button>
         </div>
 
@@ -106,23 +135,16 @@ export default function ProfilePage() {
         <div className="bg-gray-800/60 p-6 rounded-xl shadow-xl border border-gray-700 backdrop-blur-xl space-y-5">
           <h2 className="text-xl font-semibold flex items-center gap-2"><Lock size={20}/> Password Security</h2>
 
-          <input
-            type="password" value={oldPass} onChange={(e) => setOldPass(e.target.value)}
-            className="w-full p-3 bg-gray-700 rounded-lg outline-none border border-transparent focus:border-blue-500"
-            placeholder="Old Password"
-          />
-
-          <input
-            type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)}
-            className="w-full p-3 bg-gray-700 rounded-lg outline-none border border-transparent focus:border-blue-500"
-            placeholder="New Password"
-          />
+          <input type="password" value={oldPass} onChange={(e)=>setOldPass(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg outline-none" placeholder="Old Password" />
+          <input type="password" value={newPass} onChange={(e)=>setNewPass(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg outline-none" placeholder="New Password" />
 
           <button
             onClick={changePassword}
-            className="w-full bg-green-600 py-2 rounded-lg hover:bg-green-700 font-semibold transition"
+            disabled={loadingPass}
+            className={`w-full py-2 rounded-lg font-semibold transition
+              ${loadingPass ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
           >
-            Change Password
+            {loadingPass ? "Changing..." : "Change Password"}
           </button>
         </div>
 
@@ -132,13 +154,15 @@ export default function ProfilePage() {
 
           <button
             onClick={loadSessions}
-            className="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600 flex items-center gap-2"
+            disabled={loadingSessions}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2
+              ${loadingSessions ? "bg-gray-600 cursor-not-allowed" : "bg-gray-700 hover:bg-gray-600"}`}
           >
-            <RefreshCw size={16}/> Refresh
+            {loadingSessions ? "Loading..." : <><RefreshCw size={16}/> Refresh</>}
           </button>
 
           <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
-            {sessions.length > 0 ? sessions.map((s, i) => (
+            {sessions.length ? sessions.map((s,i)=>(
               <div key={i} className="bg-gray-900/60 p-3 rounded-lg border border-gray-700">
                 <p className="text-xs break-all">Token: {s.token?.slice(0,28)}...</p>
                 <p className="text-gray-400 text-xs mt-1">{new Date(s.loginAt).toLocaleString()}</p>
@@ -148,12 +172,14 @@ export default function ProfilePage() {
 
           <button
             onClick={logoutAll}
-            className="w-full bg-red-600 py-2 rounded-lg hover:bg-red-700 font-semibold transition flex items-center justify-center gap-2"
+            disabled={loadingLogoutAll}
+            className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-2
+              ${loadingLogoutAll ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}`}
           >
-            <LogOut size={18}/> Logout All Devices
+            {loadingLogoutAll ? "Logging out..." : <><LogOut size={18}/> Logout All Devices</>}
           </button>
-        </div>
 
+        </div>
       </div>
     </div>
   );

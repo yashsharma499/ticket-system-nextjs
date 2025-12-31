@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
           }}
         />
 
-        {/* no background, no padding so home page fills fully */}
+        
         <main className="min-h-screen p-0 m-0">
           {children}
         </main>

@@ -70,9 +70,7 @@ export default function TicketDetailsPage() {
     } else toast.error(data.message || "Update Failed");
   }
 
-  // --------------------------------------------------------------------
-  // ADD COMMENT (Toast)
-  // --------------------------------------------------------------------
+ 
   async function addComment() {
     let uploadedFile = null;
 
@@ -245,7 +243,7 @@ export default function TicketDetailsPage() {
 
   {/* Send Button */}
   <button
-    disabled={!comment.trim() || aiLoading}    // disable when input empty or loading
+    disabled={!comment.trim() || aiLoading}    
     onClick={addComment}
     className="bg-green-600 px-5 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-600"
   >

@@ -15,7 +15,7 @@ export function middleware(req) {
   if (!token) return NextResponse.redirect(new URL("/login", req.url));
 
   const user = verifyToken(token);
-  console.log("🔐 Middleware USER:", user);
+  
 
   if (!user) return NextResponse.redirect(new URL("/login", req.url));
 
@@ -32,5 +32,5 @@ export function middleware(req) {
 
 export const config = {
   matcher: ["/admin/:path*", "/agent/:path*", "/tickets/:path*"],
-  runtime: "nodejs"        // 🔥 This enables env access here
+  runtime: "nodejs"        
 };

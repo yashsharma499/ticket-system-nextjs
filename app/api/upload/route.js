@@ -16,10 +16,10 @@ export async function POST(req) {
     if (!file)
       return NextResponse.json({ message: "No file found" }, { status: 400 });
 
-    // Convert to buffer
+    
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Upload to Cloudinary
+    
     const uploaded = await new Promise((resolve, reject) =>
       cloudinary.uploader
         .upload_stream({ folder: "tickets" }, (err, result) => {
@@ -29,10 +29,10 @@ export async function POST(req) {
         .end(buffer)
     );
 
-    // Return ONLY URL (as required by Ticket Schema)
+    
     return NextResponse.json({
       success: true,
-      url: uploaded.secure_url,       // ✔ store this in DB
+      url: uploaded.secure_url,       
       uploadedAt: new Date()
     }, { status: 200 });
 
