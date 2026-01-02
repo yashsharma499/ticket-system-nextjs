@@ -2,19 +2,29 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import Ticket from "@/models/Ticket";
 import User from "@/models/User";
+import { getCache, setCache } from "@/lib/cache";
 
 // ================= ADMIN STATS WITH DATE FILTERS =================
 export async function GET(req) {
   try {
-    await connectDB();
-
     const { searchParams } = new URL(req.url);
-    const from = searchParams.get("from");  // YYYY-MM-DD
-    const to = searchParams.get("to");      // YYYY-MM-DD
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+
+    // 🔑 Cache key must include filters
+    const cacheKey = `admin_stats:from=${from || "none"}:to=${to || "none"}`;
+
+    // ---------- CACHE HIT ----------
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
+    // ---------- CACHE MISS ----------
+    await connectDB();
 
     let filter = {};
 
-    // 🔥 If date range applied
     if (from || to) {
       filter.createdAt = {};
       if (from) filter.createdAt.$gte = new Date(from);
@@ -59,22 +69,29 @@ export async function GET(req) {
 
     let avgResolutionTime = 0;
     if (resolvedTickets.length > 0) {
-     const totalHours = resolvedTickets.reduce((sum, t) => {
-  const diff = (new Date(t.resolvedAt) - new Date(t.createdAt)) / (1000 * 60 * 60);
-  return diff > 0 ? sum + diff : sum;  // prevent negative
-}, 0);
+      const totalHours = resolvedTickets.reduce((sum, t) => {
+        const diff =
+          (new Date(t.resolvedAt) - new Date(t.createdAt)) /
+          (1000 * 60 * 60);
+        return diff > 0 ? sum + diff : sum;
+      }, 0);
 
-      avgResolutionTime = (totalHours / resolvedTickets.length).toFixed(1); // in hours
+      avgResolutionTime = (totalHours / resolvedTickets.length).toFixed(1);
     }
 
-    return NextResponse.json({
+    const response = {
       total,
       statusCount: { open, inProgress, resolved, closed },
       priorityCount: { low, medium, high, urgent },
       ticketsPerAgent,
-      avgResolutionTime,               // ← for dashboard metric
-      dateFilterUsed: Boolean(from || to)
-    });
+      avgResolutionTime,
+      dateFilterUsed: Boolean(from || to),
+    };
+
+    // ---------- SET CACHE ----------
+    setCache(cacheKey, response, 30); // ⏱️ 30 seconds TTL
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.log("📌 STATS API ERROR:", error);

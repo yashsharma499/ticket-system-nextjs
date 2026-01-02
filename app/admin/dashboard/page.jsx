@@ -10,6 +10,7 @@ import {
   LinearScale,
   BarElement,
 } from "chart.js";
+import AdminDashboardSkeleton from "@/components/skeletons/AdminDashboardSkeleton";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -43,12 +44,15 @@ export default function AdminDashboard() {
   // Load initial stats once
   useEffect(() => { fetchStats(false); }, []);
 
-  if (!stats)
-  return (
-    <div className="flex justify-center items-center h-screen">
-      <p className="text-white text-xl">Loading Dashboard...</p>
-    </div>
-  );
+  // if (!stats)
+  // return (
+  //   <div className="flex justify-center items-center h-screen">
+  //     <p className="text-white text-xl">Loading Dashboard...</p>
+  //   </div>
+  if (!stats) {
+  return <AdminDashboardSkeleton />;
+};
+  
   return (
     <div className="min-h-screen bg-[#0b0d10] text-white p-10 pt-24">
 
