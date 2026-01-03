@@ -4,29 +4,25 @@ const ACCESS_SECRET = process.env.JWT_SECRET;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
 /* ================= ACCESS TOKEN ================= */
-// Short-lived token (used everywhere)
 export function generateAccessToken(payload) {
-  return jwt.sign(payload, ACCESS_SECRET, { expiresIn: "15m" });
+  return jwt.sign(payload, ACCESS_SECRET, {
+    expiresIn: "15m",
+  });
 }
 
-// ⚠️ Backward compatibility
-// Old code calls generateToken()
-export function generateToken(payload) {
-  return generateAccessToken(payload);
-}
-
-export function verifyToken(token) {
+export function verifyAccessToken(token) {
   try {
     return jwt.verify(token, ACCESS_SECRET);
   } catch {
-    return null;
+    return null; // expired or invalid
   }
 }
 
 /* ================= REFRESH TOKEN ================= */
-// Long-lived token
 export function generateRefreshToken(payload) {
-  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, REFRESH_SECRET, {
+    expiresIn: "7d",
+  });
 }
 
 export function verifyRefreshToken(token) {

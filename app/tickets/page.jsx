@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { PlusCircle, Loader2, XCircle, Search, Filter, ChevronLeft, ChevronRight, Download, Eye, MessageSquare, Clock, CheckCircle, AlertCircle, Bell, SortAsc, SortDesc, FileText, Tag, Calendar } from "lucide-react";
 import toast from "react-hot-toast";
 import { z } from "zod";
-
+import TicketsPageSkeleton from "@/components/skeletons/TicketsPageSkeleton";
 /* ================= ZOD VALIDATION ================= */
 const ticketSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -43,30 +43,36 @@ export default function TicketsPage() {
   const [errors, setErrors] = useState({ title: "", description: "" });
 
   const [stats, setStats] = useState({ open: 0, inProgress: 0, resolved: 0, urgent: 0 });
+  const [loading, setLoading] = useState(true);
 
 
   /* ================= FETCH TICKETS ================= */
   async function fetchTickets() {
-    const query = new URLSearchParams({
-      page, limit,
-      ...(search && { search }),
-      ...(status && { status }),
-      ...(priority && { priority }),
-    });
+  setLoading(true);
 
-    const res = await fetch(`/api/tickets?${query}`);
-    const data = await res.json();
+  const query = new URLSearchParams({
+    page, limit,
+    ...(search && { search }),
+    ...(status && { status }),
+    ...(priority && { priority }),
+  });
 
-    setTickets(data.tickets || []);
-    setTotalPages(data.totalPages || 1);
+  const res = await fetch(`/api/tickets?${query}`);
+  const data = await res.json();
 
-    setStats({
-      open: data.tickets?.filter(t => t.status === "Open")?.length || 0,
-      inProgress: data.tickets?.filter(t => t.status === "In Progress")?.length || 0,
-      resolved: data.tickets?.filter(t => t.status === "Resolved")?.length || 0,
-      urgent: data.tickets?.filter(t => t.priority === "Urgent")?.length || 0,
-    });
-  }
+  setTickets(data.tickets || []);
+  setTotalPages(data.totalPages || 1);
+
+  setStats({
+    open: data.tickets?.filter(t => t.status === "Open").length || 0,
+    inProgress: data.tickets?.filter(t => t.status === "In Progress").length || 0,
+    resolved: data.tickets?.filter(t => t.status === "Resolved").length || 0,
+    urgent: data.tickets?.filter(t => t.priority === "Urgent").length || 0,
+  });
+
+  setLoading(false);
+}
+
 
   useEffect(() => { fetchTickets(); }, [page, status, priority, search]);
 
@@ -159,7 +165,9 @@ const downloadTickets = () => {
   toast.success("CSV Exported Successfully!");
 };
 
-
+if (loading) {
+  return <TicketsPageSkeleton />;
+}
 
 /* ========================================================================== UI ========================================================================== */
 

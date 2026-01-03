@@ -1,6 +1,257 @@
 
+// "use client";
+// import { useEffect, useState } from "react";
+
+// export default function AgentDashboard() {
+
+//   const [tickets, setTickets] = useState([]);
+//   const [stats, setStats] = useState({ assigned:0, resolved:0, pending:0 });
+//   const [loading, setLoading] = useState(true);
+//   const [aiLoadingId, setAiLoadingId] = useState(null);
+
+//   const [page, setPage] = useState(1);
+//   const [limit] = useState(10);
+//   const [totalPages, setTotalPages] = useState(1);
+
+//   const [search, setSearch] = useState("");
+//   const [status, setStatus] = useState("");
+//   const [priority, setPriority] = useState("");
+
+//   // Modal state
+//   const [summaryModal, setSummaryModal] = useState({ open:false, text:"" });
+
+
+//   // ================= Fetch Tickets =================
+//   async function fetchTickets() {
+//     const query = new URLSearchParams({
+//       page,
+//       limit,
+//       ...(search && { search }),
+//       ...(status && { status }),
+//       ...(priority && { priority }),
+//     });
+
+//     const res = await fetch(`/api/tickets?${query}`);
+//     const data = await res.json();
+
+//     setTickets(data.tickets || []);
+
+//     setStats({
+//       assigned: data.tickets.length,
+//       resolved: data.tickets.filter(t => t.status==="Resolved").length,
+//       pending: data.tickets.filter(t => !["Resolved","Closed"].includes(t.status)).length,
+//     });
+
+//     setTotalPages(data.totalPages || 1);
+//     setLoading(false);
+//   }
+
+//   useEffect(() => { fetchTickets(); }, [page,status,priority]);
+
+//   const handleSearch = () => {
+//     setPage(1);
+//     fetchTickets();
+//   };
+
+//   function clearFilters() {
+//     setSearch("");
+//     setStatus("");
+//     setPriority("");
+//     setPage(1);
+//     fetchTickets();
+//   }
+
+
+//   // ================= AI SUMMARY MODAL LOGIC =================
+//   async function handleAISummary(ticket) {
+//     setAiLoadingId(ticket._id);
+
+//     try {
+//       const res = await fetch("/api/ai/summarize", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ text: ticket.description })
+//       });
+
+//       const data = await res.json();
+
+//       setSummaryModal({
+//         open:true,
+//         text:data.summary
+//       });
+
+//     } catch (err) {
+//       console.log(err);
+//     }
+
+//     setAiLoadingId(null);
+//   }
+
+
+//   if (loading) return <p className="text-white p-20">Loading...</p>;
+
+//   return(
+//     <div className="min-h-screen bg-[#0b0d10] text-white p-10 pt-24">
+
+//       <h1 className="text-3xl font-bold mb-6">🎧 Agent Dashboard</h1>
+
+//       {/* ---------------- FILTERS ---------------- */}
+//       <div className="flex gap-3 flex-wrap mb-6 items-center">
+//         <input placeholder="Search..." value={search} 
+//           onChange={e=>setSearch(e.target.value)}
+//           onKeyDown={(e)=> e.key==="Enter" && handleSearch()}
+//           className="inputField w-52" />
+
+//         <select className="inputField" value={status} onChange={e=>setStatus(e.target.value)}>
+//           <option value="">All Status</option>
+//           <option>Open</option>
+//           <option>In Progress</option>
+//           <option>Resolved</option>
+//           <option>Closed</option>
+//         </select>
+
+//         <select className="inputField" value={priority} onChange={e=>setPriority(e.target.value)}>
+//           <option value="">All Priority</option>
+//           <option>Low</option>
+//           <option>Medium</option>
+//           <option>High</option>
+//           <option>Urgent</option>
+//         </select>
+
+//         <button onClick={handleSearch} className="bg-blue-600 px-4 py-2 rounded">Search</button>
+
+//         {(search || status || priority) && (
+//           <button onClick={clearFilters} className="text-red-400 underline text-sm hover:text-red-300">
+//             Clear Filters ✖
+//           </button>
+//         )}
+//       </div>
+
+
+//       {/* ---------------- STATS CARDS ---------------- */}
+//       <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+//         <StatCard title="Assigned" value={stats.assigned}/>
+//         <StatCard title="Pending" value={stats.pending}/>
+//         <StatCard title="Resolved" value={stats.resolved}/>
+//       </div>
+
+
+//       {/* ================= TICKET TABLE ================= */}
+//       <div className="bg-[#14181e] p-6 rounded-xl border border-[#333]">
+//         <h2 className="text-xl font-semibold mb-4">Your Tickets</h2>
+
+//         <table className="w-full">
+//           <thead className="bg-[#1d232b] text-sm">
+//             <tr>
+//               <th className="p-3 text-left">Title</th>
+//               <th className="p-3">Priority</th>
+//               <th className="p-3">Status</th>
+//               <th className="p-3">AI</th>
+//               <th className="p-3">Action</th>
+//             </tr>
+//           </thead>
+
+//           <tbody>
+//             {tickets.map(t=>(
+//               <tr key={t._id} className="border-b border-[#333] hover:bg-gray-800">
+//                 <td className="p-3">{t.title}</td>
+
+//                 <td className="p-3">
+//                   <span className={`px-2 py-1 rounded text-xs ${
+//                     t.priority==="Urgent"?"bg-red-600":
+//                     t.priority==="High"?"bg-orange-500":
+//                     t.priority==="Medium"?"bg-yellow-500":"bg-green-600"
+//                   }`}>
+//                     {t.priority}
+//                   </span>
+//                 </td>
+
+//                 <td className="p-3">{t.status}</td>
+
+//                 {/* -------- AI SUMMARY ONLY ---------- */}
+//                 <td className="p-3 text-center">
+//                   <button 
+//                     onClick={()=>handleAISummary(t)} 
+//                     className="bg-blue-600 px-3 py-1 rounded text-xs"
+//                   >
+//                     {aiLoadingId===t._id ? "..." : "🧠 Summary"}
+//                   </button>
+//                 </td>
+
+//                 <td className="p-3">
+//                   <button onClick={()=>window.location.href=`/tickets/${t._id}`}
+//                     className="bg-purple-500 px-3 py-1 rounded text-sm">
+//                     Manage
+//                   </button>
+//                 </td>
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+
+
+//         {/* PAGINATION */}
+//         <div className="flex justify-center gap-4 mt-5">
+//           <button disabled={page===1} onClick={()=>setPage(p=>p-1)}
+//             className="px-5 py-2 bg-gray-700 rounded disabled:opacity-30">
+//             Prev
+//           </button>
+//           <button disabled={page===totalPages} onClick={()=>setPage(p=>p+1)}
+//             className="px-5 py-2 bg-gray-700 rounded disabled:opacity-30">
+//             Next
+//           </button>
+//         </div>
+
+//       </div>
+
+
+//       {/* ===================== MODAL ===================== */}
+//       {summaryModal.open && (
+//         <div className="fixed inset-0 flex justify-center items-center bg-black/60 backdrop-blur-sm z-50">
+//           <div className="bg-[#161b22] w-[90%] max-w-md p-6 rounded-xl border border-gray-700 shadow-xl">
+
+//             <h2 className="text-xl font-semibold mb-3 text-blue-400">🧠 AI Generated Summary</h2>
+
+//             <div className="max-h-60 overflow-y-auto pr-1 text-gray-200 leading-relaxed">
+//               {summaryModal.text}
+//             </div>
+
+//             <div className="mt-5 flex justify-end gap-3">
+//               <button 
+//                 onClick={()=>setSummaryModal({open:false,text:""})}
+//                 className="bg-gray-600 px-4 py-2 rounded hover:bg-gray-500"
+//               >
+//                 Close
+//               </button>
+
+//               <button 
+//                 onClick={()=>navigator.clipboard.writeText(summaryModal.text)}
+//                 className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500"
+//               >
+//                 Copy
+//               </button>
+//             </div>
+
+//           </div>
+//         </div>
+//       )}
+
+//     </div>
+//   );
+// }
+
+
+// function StatCard({title,value}){
+//   return(
+//     <div className="bg-[#14181e] p-6 rounded-xl text-center border border-[#333]">
+//       <p className="text-gray-400 text-sm">{title}</p>
+//       <h2 className="text-3xl font-bold">{value}</h2>
+//     </div>
+//   );
+// }
 "use client";
 import { useEffect, useState } from "react";
+import AgentDashboardSkeleton from "@/components/skeletons/AgentDashboardSkeleton";
 
 export default function AgentDashboard() {
 
@@ -17,12 +268,11 @@ export default function AgentDashboard() {
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
 
-  // Modal state
   const [summaryModal, setSummaryModal] = useState({ open:false, text:"" });
 
-
-  // ================= Fetch Tickets =================
   async function fetchTickets() {
+    setLoading(true);
+
     const query = new URLSearchParams({
       page,
       limit,
@@ -61,41 +311,34 @@ export default function AgentDashboard() {
     fetchTickets();
   }
 
-
-  // ================= AI SUMMARY MODAL LOGIC =================
   async function handleAISummary(ticket) {
     setAiLoadingId(ticket._id);
 
-    try {
-      const res = await fetch("/api/ai/summarize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: ticket.description })
-      });
+    const res = await fetch("/api/ai/summarize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: ticket.description })
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      setSummaryModal({
-        open:true,
-        text:data.summary
-      });
-
-    } catch (err) {
-      console.log(err);
-    }
+    setSummaryModal({
+      open:true,
+      text:data.summary
+    });
 
     setAiLoadingId(null);
   }
 
-
-  if (loading) return <p className="text-white p-20">Loading...</p>;
+  // ✅ Skeleton instead of text loader
+  if (loading) return <AgentDashboardSkeleton />;
 
   return(
     <div className="min-h-screen bg-[#0b0d10] text-white p-10 pt-24">
 
       <h1 className="text-3xl font-bold mb-6">🎧 Agent Dashboard</h1>
 
-      {/* ---------------- FILTERS ---------------- */}
+      {/* Filters */}
       <div className="flex gap-3 flex-wrap mb-6 items-center">
         <input placeholder="Search..." value={search} 
           onChange={e=>setSearch(e.target.value)}
@@ -121,22 +364,20 @@ export default function AgentDashboard() {
         <button onClick={handleSearch} className="bg-blue-600 px-4 py-2 rounded">Search</button>
 
         {(search || status || priority) && (
-          <button onClick={clearFilters} className="text-red-400 underline text-sm hover:text-red-300">
+          <button onClick={clearFilters} className="text-red-400 underline text-sm">
             Clear Filters ✖
           </button>
         )}
       </div>
 
-
-      {/* ---------------- STATS CARDS ---------------- */}
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-10">
         <StatCard title="Assigned" value={stats.assigned}/>
         <StatCard title="Pending" value={stats.pending}/>
         <StatCard title="Resolved" value={stats.resolved}/>
       </div>
 
-
-      {/* ================= TICKET TABLE ================= */}
+      {/* Table */}
       <div className="bg-[#14181e] p-6 rounded-xl border border-[#333]">
         <h2 className="text-xl font-semibold mb-4">Your Tickets</h2>
 
@@ -155,20 +396,9 @@ export default function AgentDashboard() {
             {tickets.map(t=>(
               <tr key={t._id} className="border-b border-[#333] hover:bg-gray-800">
                 <td className="p-3">{t.title}</td>
-
-                <td className="p-3">
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    t.priority==="Urgent"?"bg-red-600":
-                    t.priority==="High"?"bg-orange-500":
-                    t.priority==="Medium"?"bg-yellow-500":"bg-green-600"
-                  }`}>
-                    {t.priority}
-                  </span>
-                </td>
-
+                <td className="p-3">{t.priority}</td>
                 <td className="p-3">{t.status}</td>
 
-                {/* -------- AI SUMMARY ONLY ---------- */}
                 <td className="p-3 text-center">
                   <button 
                     onClick={()=>handleAISummary(t)} 
@@ -179,7 +409,8 @@ export default function AgentDashboard() {
                 </td>
 
                 <td className="p-3">
-                  <button onClick={()=>window.location.href=`/tickets/${t._id}`}
+                  <button
+                    onClick={()=>window.location.href=`/tickets/${t._id}`}
                     className="bg-purple-500 px-3 py-1 rounded text-sm">
                     Manage
                   </button>
@@ -189,8 +420,7 @@ export default function AgentDashboard() {
           </tbody>
         </table>
 
-
-        {/* PAGINATION */}
+        {/* Pagination */}
         <div className="flex justify-center gap-4 mt-5">
           <button disabled={page===1} onClick={()=>setPage(p=>p-1)}
             className="px-5 py-2 bg-gray-700 rounded disabled:opacity-30">
@@ -201,45 +431,24 @@ export default function AgentDashboard() {
             Next
           </button>
         </div>
-
       </div>
 
-
-      {/* ===================== MODAL ===================== */}
+      {/* AI Modal */}
       {summaryModal.open && (
-        <div className="fixed inset-0 flex justify-center items-center bg-black/60 backdrop-blur-sm z-50">
-          <div className="bg-[#161b22] w-[90%] max-w-md p-6 rounded-xl border border-gray-700 shadow-xl">
-
-            <h2 className="text-xl font-semibold mb-3 text-blue-400">🧠 AI Generated Summary</h2>
-
-            <div className="max-h-60 overflow-y-auto pr-1 text-gray-200 leading-relaxed">
-              {summaryModal.text}
-            </div>
-
+        <div className="fixed inset-0 flex justify-center items-center bg-black/60 z-50">
+          <div className="bg-[#161b22] w-[90%] max-w-md p-6 rounded-xl border border-gray-700">
+            <h2 className="text-xl font-semibold mb-3">🧠 AI Summary</h2>
+            <div className="max-h-60 overflow-y-auto">{summaryModal.text}</div>
             <div className="mt-5 flex justify-end gap-3">
-              <button 
-                onClick={()=>setSummaryModal({open:false,text:""})}
-                className="bg-gray-600 px-4 py-2 rounded hover:bg-gray-500"
-              >
-                Close
-              </button>
-
-              <button 
-                onClick={()=>navigator.clipboard.writeText(summaryModal.text)}
-                className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500"
-              >
-                Copy
-              </button>
+              <button onClick={()=>setSummaryModal({open:false,text:""})}
+                className="bg-gray-600 px-4 py-2 rounded">Close</button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 }
-
 
 function StatCard({title,value}){
   return(

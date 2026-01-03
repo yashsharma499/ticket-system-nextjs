@@ -21,14 +21,19 @@ const UserSchema = new mongoose.Schema(
       required: true 
     },
 
-    
     role: {
       type: String,
-      enum: ["admin", "agent", "customer"],   // customer = normal user
+      enum: ["admin", "agent", "customer"],
       default: "customer",
     },
 
-    
+    // ✅ Refresh Token (NEW)
+    refreshToken: {
+      type: String,
+      default: null,
+    },
+
+    // existing session tracking (unchanged)
     sessions: [
       {
         token: String,
@@ -36,7 +41,6 @@ const UserSchema = new mongoose.Schema(
       }
     ],
   },
-
   { timestamps: true }
 );
 
