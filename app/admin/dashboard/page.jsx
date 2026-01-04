@@ -57,12 +57,25 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-[#0b0d10] text-white p-10 pt-24">
 
       {/* HEADER */}
-      <div className="flex flex-wrap justify-between items-center mb-10 gap-4">
-        <h1 className="text-4xl font-bold">📊 Admin Dashboard</h1>
+<div className="flex flex-wrap justify-between items-center mb-10 gap-4">
+  <h1 className="text-4xl font-bold">📊 Admin Dashboard</h1>
 
-        <a href="/admin/tickets"
-           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">Manage Tickets</a>
-      </div>
+  <div className="flex gap-3">
+    <a
+      href="/admin/tickets"
+      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+    >
+      Manage Tickets
+    </a>
+
+    <a
+      href="/admin/create-ticket"
+      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+    >
+      Create Ticket
+    </a>
+  </div>
+</div>
 
       {/* DATE FILTER */}
       <div className="bg-[#14181e] p-5 rounded-xl border border-[#333] mb-10 flex flex-wrap gap-4 items-end">
