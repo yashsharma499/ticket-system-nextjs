@@ -5,8 +5,7 @@ import User from "@/models/User";
 import { verifyToken } from "@/utils/auth";
 import { sendNotification } from "@/lib/notify";
 import { sendEmail } from "@/utils/sendEmail";
-import { ticketUpdateSchema } from "@/lib/validations/ticketUpdateSchema"; 
-
+import { ticketUpdateSchema } from "@/lib/validations/ticketUpdateSchema";
 
 /* ====================== GET SINGLE TICKET ====================== */
 export async function GET(req, context) {
@@ -22,14 +21,11 @@ export async function GET(req, context) {
       return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
 
     return NextResponse.json({ ticket }, { status: 200 });
-
   } catch (error) {
     console.log("GET Ticket Error:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
-
-
 
 /* ====================== UPDATE TICKET ====================== */
 export async function PATCH(req, context) {
@@ -44,7 +40,6 @@ export async function PATCH(req, context) {
 
     const body = await req.json();
 
-    // Validate with ZOD
     const parse = ticketUpdateSchema.safeParse(body);
     if (!parse.success) {
       return NextResponse.json(
@@ -57,28 +52,28 @@ export async function PATCH(req, context) {
     if (!before)
       return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
 
-    // Agent cannot assign new agent
+    // Agent cannot assign agent
     if (parse.data.assignedTo && user.role !== "admin")
-      return NextResponse.json({ message: "Only admin can assign agents" }, { status: 403 });
+      return NextResponse.json(
+        { message: "Only admin can assign agents" },
+        { status: 403 }
+      );
 
-    
-    /* ----------------------------------------------------------
-       🕒 Auto-store resolution timestamp when marked "Resolved"
-    ---------------------------------------------------------- */
+    // Auto resolved timestamp
     if (parse.data.status === "Resolved" && !before.resolvedAt) {
       parse.data.resolvedAt = new Date();
     }
 
-
-    // Update Ticket
-    const updatedTicket = await Ticket.findByIdAndUpdate(id, parse.data, { new: true })
+    const updatedTicket = await Ticket.findByIdAndUpdate(
+      id,
+      parse.data,
+      { new: true }
+    )
       .populate("createdBy", "name email")
       .populate("assignedTo", "name email");
 
+    /* ========== Notifications + Emails ========== */
 
-    /* ================= Notifications + Email ================= */
-
-    // 1️⃣ Assigned Agent Notification
     if (parse.data.assignedTo && parse.data.assignedTo !== before.assignedTo?.toString()) {
       await sendNotification({
         userId: parse.data.assignedTo,
@@ -90,56 +85,80 @@ export async function PATCH(req, context) {
         const agent = await User.findById(parse.data.assignedTo);
         await sendEmail({
           to: agent.email,
-          subject: `New Ticket Assigned`,
-          html: `<h2>🎫 New Ticket Assigned</h2><p>${before.title}</p>`,
+          subject: "New Ticket Assigned",
+          html: `<p>${before.title}</p>`,
         });
-      } catch (e) { console.log("Email(assign) failed:", e.message); }
+      } catch {}
     }
 
-    // 2️⃣ Status Changed Notification
     if (parse.data.status && parse.data.status !== before.status) {
       await sendNotification({
         userId: before.createdBy,
-        message: `Ticket "${before.title}" status updated → ${parse.data.status}`,
+        message: `Ticket status → ${parse.data.status}`,
         link: `/tickets/${id}`,
       });
-
-      try {
-        const creator = await User.findById(before.createdBy);
-        await sendEmail({
-          to: creator.email,
-          subject: `Ticket Status Updated`,
-          html: `<p>Your ticket <b>${before.title}</b> is now <b>${parse.data.status}</b></p>`,
-        });
-      } catch (e) { console.log("Email(status) failed:", e.message); }
     }
 
-    // 3️⃣ Priority Changed Notification
     if (parse.data.priority && parse.data.priority !== before.priority) {
       await sendNotification({
         userId: before.createdBy,
         message: `Priority updated → ${parse.data.priority}`,
         link: `/tickets/${id}`,
       });
-
-      try {
-        const creator = await User.findById(before.createdBy);
-        await sendEmail({
-          to: creator.email,
-          subject: `Ticket Priority Updated`,
-          html: `<p>Priority changed to <b>${parse.data.priority}</b></p>`,
-        });
-      } catch (e) { console.log("Email(priority) failed:", e.message); }
     }
-
 
     return NextResponse.json(
       { message: "Updated successfully", ticket: updatedTicket },
       { status: 200 }
     );
-
   } catch (error) {
     console.log("PATCH Ticket Error:", error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
+  }
+}
+
+/* ====================== DELETE TICKET (ADMIN ONLY) ====================== */
+export async function DELETE(req, context) {
+  try {
+    await connectDB();
+    const { id } = await context.params;
+
+
+    const token = req.cookies.get("token")?.value;
+    const user = verifyToken(token);
+
+    if (!user || user.role !== "admin") {
+      return NextResponse.json(
+        { message: "Forbidden" },
+        { status: 403 }
+      );
+    }
+
+    const ticket = await Ticket.findById(id);
+    if (!ticket)
+      return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
+
+    await Ticket.findByIdAndDelete(id);
+
+    // Notify ticket creator
+    await sendNotification({
+      userId: ticket.createdBy,
+      message: `Your ticket "${ticket.title}" was deleted by admin`,
+      link: "/tickets",
+    });
+
+    try {
+      const creator = await User.findById(ticket.createdBy);
+      await sendEmail({
+        to: creator.email,
+        subject: "Ticket Deleted",
+        html: `<p>Your ticket <b>${ticket.title}</b> was deleted by admin.</p>`,
+      });
+    } catch {}
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.log("DELETE Ticket Error:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }

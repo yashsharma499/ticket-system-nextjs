@@ -1,14 +1,12 @@
-
-
-
 "use client";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import TicketDetailsSkeleton from "@/components/skeletons/TicketDetailsSkeleton";
 
 export default function TicketDetailsPage() {
   const { id } = useParams();
+  const router = useRouter();
 
   const [ticket, setTicket] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -24,6 +22,7 @@ export default function TicketDetailsPage() {
   const [aiSummary, setAiSummary] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   /* ================= LOAD DATA ================= */
   useEffect(() => {
@@ -53,35 +52,50 @@ export default function TicketDetailsPage() {
   }
 
   /* ================= UPDATE TICKET ================= */
- async function updateTicket() {
-  if (updating) return;
-  setUpdating(true);
+  async function updateTicket() {
+    if (updating) return;
+    setUpdating(true);
 
-  const payload = {
-    status,
-    priority,
-  };
+    const payload = { status, priority };
 
-  // ✅ ONLY ADMIN can send assignedTo
-  if (isAdmin && selectedAgent) {
-    payload.assignedTo = selectedAgent;
+    if (isAdmin && selectedAgent) {
+      payload.assignedTo = selectedAgent;
+    }
+
+    const res = await fetch(`/api/tickets/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      toast.success("Ticket updated successfully");
+      fetchTicket();
+    } else {
+      toast.error("Update failed");
+    }
+
+    setUpdating(false);
   }
 
-  const res = await fetch(`/api/tickets/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  /* ================= DELETE TICKET (ADMIN ONLY) ================= */
+  async function deleteTicket() {
+    if (!confirm("Are you sure you want to delete this ticket?")) return;
 
-  if (res.ok) {
-    toast.success("Ticket updated successfully");
-    fetchTicket();
-  } else {
-    toast.error("Update failed");
+    setDeleting(true);
+
+    const res = await fetch(`/api/tickets/${id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      toast.success("Ticket deleted");
+      router.push("/admin/tickets");
+    } else {
+      toast.error("Delete failed");
+      setDeleting(false);
+    }
   }
-
-  setUpdating(false);
-}
 
   /* ================= ADD COMMENT ================= */
   async function addComment() {
@@ -151,7 +165,7 @@ export default function TicketDetailsPage() {
           <button
             onClick={summarizeTicket}
             disabled={aiLoading}
-            className="absolute top-6 right-6 bg-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:bg-gray-600"
+            className="absolute top-6 right-6 bg-blue-600 px-3 py-1 rounded text-sm disabled:bg-gray-600"
           >
             {aiLoading ? "Summarizing..." : "🧠 Summarize"}
           </button>
@@ -159,12 +173,8 @@ export default function TicketDetailsPage() {
 
         {aiSummary && (
           <div className="bg-[#0c1116] mt-4 p-4 rounded border border-[#333]">
-            <p className="text-sm text-blue-400 font-semibold mb-1">
-              AI Summary
-            </p>
-            <p className="text-gray-300 text-sm leading-relaxed">
-              {aiSummary}
-            </p>
+            <p className="text-sm text-blue-400 font-semibold mb-1">AI Summary</p>
+            <p className="text-gray-300 text-sm">{aiSummary}</p>
           </div>
         )}
       </div>
@@ -214,10 +224,21 @@ export default function TicketDetailsPage() {
           <button
             onClick={updateTicket}
             disabled={updating}
-            className="bg-blue-600 w-full py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-600"
+            className="bg-blue-600 w-full py-2 rounded-lg disabled:bg-gray-600"
           >
             Save Changes
           </button>
+
+          {/* ADMIN DELETE */}
+          {isAdmin && (
+            <button
+              onClick={deleteTicket}
+              disabled={deleting}
+              className="bg-red-600 w-full py-2 rounded-lg disabled:bg-gray-600"
+            >
+              Delete Ticket
+            </button>
+          )}
         </div>
       )}
 
@@ -226,18 +247,11 @@ export default function TicketDetailsPage() {
         <h2 className="text-2xl font-bold mb-4">💬 Comments</h2>
 
         {ticket.comments?.map((c, i) => (
-          <div
-            key={i}
-            className="p-4 bg-[#0b0d10] rounded border border-[#333] mb-3"
-          >
+          <div key={i} className="p-4 bg-[#0b0d10] rounded border border-[#333] mb-3">
             <p>{c.message}</p>
 
             {c.attachment && (
-              <a
-                href={c.attachment}
-                target="_blank"
-                className="text-blue-400 underline block mt-2"
-              >
+              <a href={c.attachment} target="_blank" className="text-blue-400 underline block mt-2">
                 📎 View File
               </a>
             )}
@@ -260,7 +274,7 @@ export default function TicketDetailsPage() {
             <button
               disabled={!comment.trim()}
               onClick={addComment}
-              className="bg-green-600 px-5 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-600"
+              className="bg-green-600 px-5 py-2 rounded-lg disabled:bg-gray-600"
             >
               Send
             </button>
