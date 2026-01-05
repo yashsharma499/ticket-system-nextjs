@@ -1,26 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifyToken } from "@/utils/auth";
-import { rateLimit } from "@/lib/rateLimit";
 
 export function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0] ||
-    req.ip ||
-    "unknown";
-
   const token = req.cookies.get("token")?.value;
   const user = token ? verifyToken(token) : null;
-
-  // -------- RATE LIMIT ----------
-  const key = user ? `${ip}:${user.id}` : ip;
-  if (!rateLimit(key)) {
-    return new NextResponse(
-      JSON.stringify({ message: "Too many requests" }),
-      { status: 429, headers: { "Content-Type": "application/json" } }
-    );
-  }
+  console.log("TOKEN:", token);
+console.log("USER FROM TOKEN:", user);
 
   // -------- PUBLIC ROUTES --------
   if (
