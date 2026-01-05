@@ -63,17 +63,35 @@ export default function TicketsPage() {
   setTickets(data.tickets || []);
   setTotalPages(data.totalPages || 1);
 
-  setStats({
-    open: data.tickets?.filter(t => t.status === "Open").length || 0,
-    inProgress: data.tickets?.filter(t => t.status === "In Progress").length || 0,
-    resolved: data.tickets?.filter(t => t.status === "Resolved").length || 0,
-    urgent: data.tickets?.filter(t => t.priority === "Urgent").length || 0,
-  });
+  // setStats({
+  //   open: data.tickets?.filter(t => t.status === "Open").length || 0,
+  //   inProgress: data.tickets?.filter(t => t.status === "In Progress").length || 0,
+  //   resolved: data.tickets?.filter(t => t.status === "Resolved").length || 0,
+  //   urgent: data.tickets?.filter(t => t.priority === "Urgent").length || 0,
+  // });
 
   setLoading(false);
 }
+async function fetchStats() {
+  try {
+    const res = await fetch("/api/tickets?limit=1000");
+    const data = await res.json();
 
+    const all = data.tickets || [];
 
+    setStats({
+      open: all.filter(t => t.status === "Open").length,
+      inProgress: all.filter(t => t.status === "In Progress").length,
+      resolved: all.filter(t => t.status === "Resolved").length,
+      urgent: all.filter(t => t.priority === "Urgent").length,
+    });
+  } catch (err) {
+    console.error("Stats fetch error", err);
+  }
+}
+useEffect(() => {
+  fetchStats();
+}, []);
   useEffect(() => { fetchTickets(); }, [page, status, priority, search]);
 
 
@@ -117,7 +135,8 @@ export default function TicketsPage() {
       setForm({ title:"", description:"", category:"General", priority:"Low", file:null });
       if(fileRef.current) fileRef.current.value="";
 
-      fetchTickets();
+      await fetchTickets();
+fetchStats();
     } catch (e) { toast.error(e.message); }
     setCreating(false);
   }
