@@ -218,7 +218,7 @@ export async function GET(req) {
     };
 
     // ---------- SET CACHE ----------
-    setCache(cacheKey, response, 30); // ⏱️ 30 seconds TTL
+    setCache(cacheKey, response, 120); // ⏱️ 30 seconds TTL
 
     return NextResponse.json(response);
   } catch (error) {
